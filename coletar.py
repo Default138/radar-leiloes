@@ -64,7 +64,8 @@ def formatar(item):
                   f"📅 Leilão {data_br(item['data_leilao'])}"]
         if item["prazo_propostas"]:
             linhas.append(f"⏰ Propostas até {data_br(item['prazo_propostas'])}")
-    linhas.append(f'<a href="{e(item["link"])}">Abrir</a> · <a href="{e(item["link_edital"])}">Edital</a>')
+        linhas.append(f"🔖 {e(item['edital'] or '')}")
+    linhas.append(f'<a href="{e(item["link"])}">Site do leilão</a> · <a href="{e(item["link_edital"])}">Edital</a>')
     return "\n".join(linhas)
 
 

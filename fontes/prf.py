@@ -74,9 +74,33 @@ def _datas_futuras(texto):
     return sorted(datas)
 
 
-def _site_leiloeiro(texto):
-    achado = re.search(r"(?:www\.)?\s*([a-z0-9-]+leiloes?\.com\.br)", texto, re.I)
-    return f"https://www.{achado.group(1).lower()}" if achado else None
+def _site_leiloeiro(texto_edital, texto_noticia):
+    """
+    Site onde os LANCES acontecem.
+
+    Cuidado: o leiloeiro (a pessoa) às vezes usa uma plataforma com outro
+    nome. Ex.: o leiloeiro é Helcio Kronberg, mas os lances são no site
+    vipleiloes.com.br. Por isso procuramos primeiro, no PDF do edital, um
+    endereço perto das palavras "lance" ou "cadastro".
+    """
+    for texto in (texto_edital, texto_noticia):
+        achado = re.search(
+            r"(?:lance|cadastr)[^.]{0,250}?(https?://(?:www\.)?[a-z0-9.-]+\.com\.br)",
+            texto, re.I)
+        if achado:
+            return achado.group(1).lower().rstrip("/")
+    # Plano B: qualquer site "...leiloes.com.br" citado.
+    for texto in (texto_edital, texto_noticia):
+        achado = re.search(r"([a-z0-9-]+leil(?:oes|ao)\.com\.br)", texto, re.I)
+        if achado:
+            return f"https://www.{achado.group(1).lower()}"
+    return None
+
+
+def _texto_pdf(conteudo):
+    """Texto corrido de um PDF (todas as páginas, sem quebras de linha)."""
+    leitor = PdfReader(io.BytesIO(conteudo))
+    return " ".join(" ".join((p.extract_text() or "") for p in leitor.pages).split())
 
 
 def _leiloes_recentes():
@@ -89,12 +113,21 @@ def _leiloes_recentes():
             yield noticia["@id"]
 
 
-def _anexos_pdf(url_noticia):
-    """Endereços dos PDFs de anexo (planilhas de lotes) dentro da notícia."""
+def _arquivos_pdf(url_noticia):
+    """
+    PDFs dentro da notícia, separados em dois grupos:
+      - editais: o texto com as regras (onde dar lance, prazos...)
+      - anexos:  as planilhas com os lotes ("ANEXO")
+    """
     busca = f"{_para_api(url_noticia)}/@search?portal_type=File&b_size=50"
+    editais, anexos = [], []
     for arquivo in baixar_json(busca)["items"]:
+        url = arquivo["@id"] + "/@@download/file"
         if "ANEXO" in normalizar(arquivo["title"]):
-            yield arquivo["@id"] + "/@@download/file"
+            anexos.append(url)
+        else:
+            editais.append(url)
+    return editais, anexos
 
 
 def _registros_do_pdf(conteudo):
@@ -196,10 +229,12 @@ def coletar():
         datas = _datas_futuras(texto)
         if not datas:
             continue  # leilão já aconteceu
-        leiloeiro = _site_leiloeiro(texto)
+        editais, anexos = _arquivos_pdf(url_noticia)
+        texto_edital = " ".join(_texto_pdf(baixar(u)) for u in editais)
+        leiloeiro = _site_leiloeiro(texto_edital, texto)
         resumo_datas = ", ".join(d.strftime("%d/%m") for d in datas)
 
-        for url_pdf in _anexos_pdf(url_noticia):
+        for url_pdf in anexos:
             for registro in _registros_do_pdf(baixar(url_pdf)):
                 moto = _interpretar(registro)
                 if not moto:
@@ -236,9 +271,9 @@ def coletar():
                     "data_leilao": data.strftime("%Y-%m-%d 09:00"),
                     "prazo_propostas": None,
                     "link": leiloeiro or url_noticia,
-                    "link_edital": url_noticia,
+                    "link_edital": editais[0] if editais else url_noticia,
                     "foto": None,
                     "obs": " | ".join(obs),
-                    "edital": f"PRF: {noticia.get('title', '')} (lote {moto['lote']})",
+                    "edital": f"Lote {moto['lote']} (procure este número no site do leilão)",
                 })
     return itens

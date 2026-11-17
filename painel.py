@@ -215,12 +215,13 @@ function desenhar() {
         <div class="meta">📅 Leilão: ${esc(quando(i.data_leilao))}</div>
         ${i.prazo_propostas ? `<div class="alerta">⏰ Propostas até ${esc(quando(i.prazo_propostas))}</div>` : ""}
         <div class="meta">📍 ${esc(i.patio || i.cidade)}${i.placa ? " · " + esc(i.placa) : ""}</div>
+        ${i.tipo === "lote" ? `<div class="meta">🔖 ${esc(i.edital)}</div>` : ""}
         ${i.tipo === "leilao" ? `<div class="meta">${esc((i.descricao || "").slice(0, 220))}</div>` : ""}
         ${i.valor_avaliacao && i.valor_avaliacao !== i.valor_minimo && i.tipo !== "leilao"
           ? `<div class="meta">Avaliação: ${brl(i.valor_avaliacao)}</div>` : ""}
         ${i.obs ? `<div class="obs">⚠️ ${esc(i.obs)}</div>` : ""}
         <div class="links">
-          <a href="${esc(i.link)}" target="_blank" rel="noopener">Ver lote / leiloeiro</a>
+          <a href="${esc(i.link)}" target="_blank" rel="noopener">Site do leilão</a>
           <a href="${esc(i.link_edital)}" target="_blank" rel="noopener">Edital</a>
         </div>
       </div>
