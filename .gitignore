@@ -1,0 +1,13 @@
+# Segredos (token do Telegram) - NUNCA subir para o GitHub
+.env
+
+# Logs locais
+coleta.log
+
+# Ambiente Python
+.venv/
+__pycache__/
+
+# leiloes.db e docs/ NÃO estão aqui de propósito: o GitHub Actions
+# precisa salvar os dois no repositório (banco = memória do que já foi
+# avisado; docs/ = o site publicado no GitHub Pages).

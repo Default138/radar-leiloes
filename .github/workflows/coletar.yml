@@ -1,0 +1,53 @@
+# Roda o Radar de Leilões nos servidores do GitHub, sem precisar do seu PC.
+#
+# - "schedule": horários automáticos (em UTC; o Brasil é UTC-3)
+# - "workflow_dispatch": cria um botão "Run workflow" na aba Actions,
+#   para rodar na hora quando você quiser
+name: Coletar leilões
+
+on:
+  schedule:
+    - cron: "0 11 * * *"   # 08:00 de Brasília
+    - cron: "0 21 * * *"   # 18:00 de Brasília
+  workflow_dispatch:
+
+# Permite que o workflow salve (commit) o banco e o site atualizados.
+permissions:
+  contents: write
+
+# Nunca roda duas coletas ao mesmo tempo.
+concurrency:
+  group: coleta
+  cancel-in-progress: false
+
+jobs:
+  coletar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      TZ: America/Sao_Paulo   # para as datas/horas saírem no horário de Brasília
+    steps:
+      - name: Baixar o código
+        uses: actions/checkout@v4
+
+      - name: Instalar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Instalar dependências
+        run: pip install -r requirements.txt
+
+      - name: Coletar e avisar no Telegram
+        env:
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: python coletar.py
+
+      - name: Salvar banco e site atualizados
+        run: |
+          git config user.name "radar-leiloes[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add leiloes.db docs/
+          git diff --cached --quiet || git commit -m "Coleta automática $(date '+%d/%m/%Y %H:%M')"
+          git push
