@@ -33,7 +33,8 @@ fontes/prefeituras.py  <- coletor do PNCP
 util.py                <- funções comuns (download, cidades, categorias)
 banco.py               <- banco SQLite (leiloes.db)
 telegram.py            <- envio de mensagens
-painel.py              <- gera o site (docs/index.html)
+painel.py              <- gera o site (docs/index.html) a partir do modelo
+modelo_site.html       <- visual do site (HTML/CSS/JS) — edite aqui para mudar a aparência
 .github/workflows/coletar.yml <- agenda do GitHub Actions
 ```
 

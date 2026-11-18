@@ -1,0 +1,533 @@
+<!doctype html>
+<!--
+  Modelo do site do Radar de Leilões.
+  O painel.py lê este arquivo e troca os marcadores (palavras entre dois
+  sublinhados, como DADOS e ATUALIZADO) pelos valores reais, gerando docs/index.html.
+  Para mudar o visual, edite AQUI (não no docs/index.html, que é sobrescrito).
+-->
+<html lang="pt-br">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Radar de Leilões</title>
+<meta name="description" content="Veículos em leilão entre Foz do Iguaçu e Cascavel: Receita Federal, PRF e Prefeituras.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏍️</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script>
+  // Aplica o tema salvo ANTES de desenhar a página (evita "piscar" claro→escuro).
+  try { const t = localStorage.getItem("radar-tema"); if (t) document.documentElement.dataset.theme = t; } catch (e) {}
+</script>
+<style>
+  /* ============ CORES (tema claro) ============ */
+  :root {
+    --fundo: #f4f6f1;  --superficie: #ffffff;  --superficie-2: #eef2ea;
+    --texto: #16201b;  --suave: #5a6660;       --borda: #dde3d8;
+    --acento: #2e7d32; --acento-texto: #ffffff; --acento-suave: #e3f1de;
+    --ok: #1f7a35;      --ok-fundo: #e2f4e6;
+    --atencao: #9a5b00; --atencao-fundo: #fbefd9;
+    --perigo: #b3261e;  --perigo-fundo: #fbe4e2;
+    --info: #1d5fae;    --info-fundo: #e2edfa;
+    --roxo: #6b3fa0;    --roxo-fundo: #efe6fa;
+    --sombra: 0 1px 2px rgba(16,32,24,.06), 0 4px 16px rgba(16,32,24,.06);
+    --sombra-forte: 0 2px 4px rgba(16,32,24,.08), 0 12px 32px rgba(16,32,24,.12);
+    color-scheme: light;
+  }
+  /* ============ CORES (tema escuro) ============ */
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --fundo: #0b171c;  --superficie: #12242b;  --superficie-2: #183039;
+      --texto: #e6eef0;  --suave: #94a9af;       --borda: #22414b;
+      --acento: #a8d35f; --acento-texto: #0b171c; --acento-suave: #1f3a28;
+      --ok: #7fd99a;      --ok-fundo: #173a26;
+      --atencao: #f2c14e; --atencao-fundo: #3a2f12;
+      --perigo: #ff8a80;  --perigo-fundo: #42201e;
+      --info: #82b8ff;    --info-fundo: #16304d;
+      --roxo: #c7a6ff;    --roxo-fundo: #2c2145;
+      --sombra: 0 1px 2px rgba(0,0,0,.3), 0 4px 16px rgba(0,0,0,.25);
+      --sombra-forte: 0 2px 4px rgba(0,0,0,.35), 0 12px 32px rgba(0,0,0,.4);
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --fundo: #0b171c;  --superficie: #12242b;  --superficie-2: #183039;
+    --texto: #e6eef0;  --suave: #94a9af;       --borda: #22414b;
+    --acento: #a8d35f; --acento-texto: #0b171c; --acento-suave: #1f3a28;
+    --ok: #7fd99a;      --ok-fundo: #173a26;
+    --atencao: #f2c14e; --atencao-fundo: #3a2f12;
+    --perigo: #ff8a80;  --perigo-fundo: #42201e;
+    --info: #82b8ff;    --info-fundo: #16304d;
+    --roxo: #c7a6ff;    --roxo-fundo: #2c2145;
+    --sombra: 0 1px 2px rgba(0,0,0,.3), 0 4px 16px rgba(0,0,0,.25);
+    --sombra-forte: 0 2px 4px rgba(0,0,0,.35), 0 12px 32px rgba(0,0,0,.4);
+    color-scheme: dark;
+  }
+
+  /* ============ BASE ============ */
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body { margin: 0; background: var(--fundo); color: var(--texto);
+         font-family: "Plus Jakarta Sans", system-ui, "Segoe UI", Roboto, sans-serif;
+         font-size: 15px; line-height: 1.45; }
+  a { color: inherit; }
+  button, input, select { font: inherit; color: inherit; }
+  :focus-visible { outline: 2px solid var(--acento); outline-offset: 2px; }
+  .largura { max-width: 1180px; margin: 0 auto; padding: 0 16px; }
+
+  /* ============ TOPO ============ */
+  .topo { padding: 22px 0 6px; }
+  .topo .largura { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .marca { display: flex; align-items: center; gap: 12px; min-width: 0; }
+  .logo { width: 46px; height: 46px; border-radius: 14px; flex: none; display: grid; place-items: center;
+          background: var(--acento); color: var(--acento-texto); font-size: 24px; box-shadow: var(--sombra); }
+  .marca h1 { margin: 0; font-size: 1.35rem; font-weight: 800; letter-spacing: -.02em; }
+  .marca p { margin: 2px 0 0; color: var(--suave); font-size: .85rem; }
+  .acoes-topo { display: flex; align-items: center; gap: 10px; flex: none; }
+  .atualizado { color: var(--suave); font-size: .8rem; text-align: right; }
+  .btn-tema { width: 40px; height: 40px; border-radius: 12px; border: 1px solid var(--borda);
+              background: var(--superficie); cursor: pointer; font-size: 18px; box-shadow: var(--sombra); }
+
+  /* ============ RESUMO (3 números) ============ */
+  .resumo { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 16px auto 0; }
+  .stat { background: var(--superficie); border: 1px solid var(--borda); border-radius: 16px;
+          padding: 14px 16px; box-shadow: var(--sombra); min-width: 0; }
+  .stat .rotulo { color: var(--suave); font-size: .78rem; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; }
+  .stat .valor { font-size: 1.6rem; font-weight: 800; letter-spacing: -.02em; margin-top: 2px;
+                 white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .stat .detalhe { color: var(--suave); font-size: .82rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .stat.destaque { background: var(--acento); border-color: var(--acento); color: var(--acento-texto); }
+  .stat.destaque .rotulo, .stat.destaque .detalhe { color: inherit; opacity: .85; }
+
+  /* ============ FILTROS ============ */
+  .filtros { background: var(--superficie); border: 1px solid var(--borda); border-radius: 16px;
+             padding: 14px 16px; margin: 12px auto 0; box-shadow: var(--sombra); display: grid; gap: 12px; }
+  .linha { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; min-width: 0; }
+  .filtros > * { min-width: 0; }  /* deixa as linhas do grid encolherem no celular */
+  .rotulo-filtro { font-size: .75rem; font-weight: 700; color: var(--suave); text-transform: uppercase;
+                   letter-spacing: .05em; width: 52px; flex: none; }
+  .chip { border: 1px solid var(--borda); background: var(--superficie); border-radius: 999px;
+          padding: 7px 13px; font-size: .88rem; font-weight: 500; cursor: pointer; transition: .15s; }
+  .chip:hover { border-color: var(--acento); }
+  .chip[aria-pressed="true"] { background: var(--acento); border-color: var(--acento); color: var(--acento-texto); font-weight: 700; }
+  .chip .n { opacity: .7; font-weight: 500; margin-left: 5px; font-size: .8rem; }
+  .campo { border: 1px solid var(--borda); background: var(--superficie-2); border-radius: 10px; padding: 8px 10px; }
+  input.campo[type=number] { width: 104px; }
+  .preco-sep { color: var(--suave); font-size: .9rem; }
+  details.mais { border-top: 1px dashed var(--borda); padding-top: 10px; }
+  details.mais > summary { cursor: pointer; font-weight: 600; font-size: .9rem; color: var(--suave); list-style: none;
+                           display: inline-flex; align-items: center; gap: 6px; }
+  details.mais > summary::-webkit-details-marker { display: none; }
+  details.mais > summary::before { content: "▸"; transition: transform .15s; }
+  details.mais[open] > summary::before { transform: rotate(90deg); }
+  details.mais .conteudo { display: grid; gap: 10px; margin-top: 10px; }
+  #busca { flex: 1 1 240px; min-width: 0; }
+  .check { display: inline-flex; align-items: center; gap: 7px; font-size: .9rem; cursor: pointer; }
+  .check input { accent-color: var(--acento); width: 16px; height: 16px; }
+  .link-limpar { background: none; border: 0; padding: 0; color: var(--acento); font-weight: 600;
+                 cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+
+  /* ============ GRUPOS POR DIA ============ */
+  main { padding-top: 8px; padding-bottom: 48px; }
+  .dia { margin-top: 26px; }
+  .dia-cab { display: flex; align-items: center; gap: 14px; margin-bottom: 12px; }
+  .dia-data { flex: none; width: 58px; text-align: center; border-radius: 14px; overflow: hidden;
+              background: var(--superficie); border: 1px solid var(--borda); box-shadow: var(--sombra); }
+  .dia-semana { display: block; background: var(--acento); color: var(--acento-texto);
+                font-size: .7rem; font-weight: 800; letter-spacing: .08em; padding: 3px 0; }
+  .dia-num { display: block; font-size: 1.05rem; font-weight: 800; padding: 4px 0 5px; }
+  .dia-info h2 { margin: 0; font-size: 1.1rem; font-weight: 800; letter-spacing: -.01em; }
+  .dia-info p { margin: 1px 0 0; color: var(--suave); font-size: .85rem; }
+  .contagem { margin-left: auto; flex: none; font-size: .8rem; font-weight: 700; padding: 5px 11px;
+              border-radius: 999px; background: var(--acento-suave); color: var(--acento); }
+  .contagem.urgente { background: var(--perigo-fundo); color: var(--perigo); }
+  .grade { display: grid; grid-template-columns: repeat(auto-fill, minmax(255px, 1fr)); gap: 14px; }
+
+  /* ============ CARD ============ */
+  .card { background: var(--superficie); border: 1px solid var(--borda); border-radius: 18px; overflow: hidden;
+          display: flex; flex-direction: column; box-shadow: var(--sombra); transition: transform .15s, box-shadow .15s; }
+  .card:hover { transform: translateY(-2px); box-shadow: var(--sombra-forte); }
+  .midia { position: relative; height: 132px; display: grid; place-items: center; background: var(--superficie-2); }
+  .midia img { width: 100%; height: 100%; object-fit: cover; }
+  .midia .icone { font-size: 52px; filter: saturate(.9); }
+  .midia.cat-moto  { background: linear-gradient(135deg, var(--acento-suave), var(--superficie-2)); }
+  .midia.cat-carro { background: linear-gradient(135deg, var(--info-fundo), var(--superficie-2)); }
+  .midia.cat-pref  { background: linear-gradient(135deg, var(--roxo-fundo), var(--superficie-2)); }
+  .selos { position: absolute; top: 10px; left: 10px; right: 10px; display: flex; justify-content: space-between; gap: 6px; }
+  .selo { font-size: .72rem; font-weight: 700; padding: 3px 9px; border-radius: 999px; backdrop-filter: blur(4px); }
+  .fonte-receita { background: var(--info-fundo); color: var(--info); }
+  .fonte-prf { background: var(--atencao-fundo); color: var(--atencao); }
+  .fonte-prefeitura { background: var(--roxo-fundo); color: var(--roxo); }
+  .selo.novo { background: var(--acento); color: var(--acento-texto); }
+
+  .corpo { padding: 13px 15px 15px; display: flex; flex-direction: column; gap: 9px; flex: 1; }
+  .marca-veiculo { font-size: .72rem; font-weight: 700; color: var(--suave); text-transform: uppercase; letter-spacing: .06em; }
+  .titulo { margin: 0; font-size: 1.02rem; font-weight: 700; line-height: 1.25; }
+  .preco { display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; }
+  .preco strong { font-size: 1.45rem; font-weight: 800; letter-spacing: -.02em; color: var(--acento); }
+  .preco span { color: var(--suave); font-size: .78rem; }
+  .status { align-self: flex-start; font-size: .76rem; font-weight: 700; padding: 3px 10px; border-radius: 999px;
+            display: inline-flex; align-items: center; gap: 6px; }
+  .status::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+  .st-ok { background: var(--ok-fundo); color: var(--ok); }
+  .st-atencao { background: var(--atencao-fundo); color: var(--atencao); }
+  .st-perigo { background: var(--perigo-fundo); color: var(--perigo); }
+  .st-info { background: var(--info-fundo); color: var(--info); }
+  .st-roxo { background: var(--roxo-fundo); color: var(--roxo); }
+  .infos { list-style: none; margin: 0; padding: 0; display: grid; gap: 3px; color: var(--suave); font-size: .84rem; }
+  .infos li { display: flex; gap: 7px; }
+  .infos li span:first-child { flex: none; width: 18px; text-align: center; }
+  .prazo { font-size: .82rem; font-weight: 700; color: var(--perigo); background: var(--perigo-fundo);
+           border-radius: 10px; padding: 6px 10px; }
+  .aviso { font-size: .8rem; color: var(--atencao); background: var(--atencao-fundo); border-radius: 10px; padding: 6px 10px; }
+  .descricao { color: var(--suave); font-size: .85rem; display: -webkit-box; -webkit-line-clamp: 3;
+               -webkit-box-orient: vertical; overflow: hidden; }
+  .botoes { margin-top: auto; padding-top: 4px; display: flex; gap: 8px; }
+  .btn { flex: 1; text-align: center; text-decoration: none; font-weight: 700; font-size: .86rem;
+         padding: 9px 10px; border-radius: 11px; border: 1px solid var(--borda); transition: .15s; }
+  .btn:hover { border-color: var(--acento); }
+  .btn.primario { background: var(--acento); border-color: var(--acento); color: var(--acento-texto); }
+  .btn.primario:hover { filter: brightness(1.07); }
+
+  .vazio { text-align: center; color: var(--suave); padding: 48px 16px; }
+  .vazio .grande { font-size: 44px; }
+  footer { color: var(--suave); font-size: .8rem; text-align: center; padding: 0 16px 32px; }
+
+  /* ============ CELULAR ============ */
+  @media (max-width: 640px) {
+    .topo { padding-top: 16px; }
+    .atualizado { display: none; }
+    .resumo { gap: 8px; }
+    .stat { padding: 10px 12px; border-radius: 14px; }
+    .stat .valor { font-size: 1.2rem; }
+    .stat .rotulo { font-size: .68rem; }
+    .stat .detalhe { font-size: .72rem; }
+    .rotulo-filtro { width: 100%; }
+    /* Botões numa linha só, rolando para o lado (em vez de quebrar em várias linhas). */
+    /* min-width: 0 deixa o item encolher; sem isso ele estica a página para o lado. */
+    .rolagem { flex: 1 1 100%; min-width: 0; flex-wrap: nowrap; overflow-x: auto; padding-bottom: 2px;
+               scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+    .rolagem::-webkit-scrollbar { display: none; }
+    .rolagem .chip { flex: none; }
+    .faixa { flex: 1 1 100%; min-width: 0; flex-wrap: nowrap; }
+    details.mais .campo { flex: 1 1 100%; }
+    .faixa input.campo[type=number] { width: 0; flex: 1 1 0; min-width: 0; }
+    .grade { grid-template-columns: 1fr; }
+    .contagem { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<header class="topo">
+  <div class="largura">
+    <div class="marca">
+      <div class="logo" aria-hidden="true">🏍️</div>
+      <div>
+        <h1>Radar de Leilões</h1>
+        <p>Foz do Iguaçu → Cascavel · Receita Federal, PRF e Prefeituras</p>
+      </div>
+    </div>
+    <div class="acoes-topo">
+      <div class="atualizado">Atualizado em<br><strong>__ATUALIZADO__</strong></div>
+      <button class="btn-tema" id="btnTema" type="button" aria-label="Trocar tema claro/escuro"></button>
+    </div>
+  </div>
+</header>
+
+<section class="largura resumo" aria-label="Resumo">
+  <div class="stat destaque"><div class="rotulo">Encontrados</div><div class="valor" id="stTotal">–</div><div class="detalhe" id="stTotalDet"></div></div>
+  <div class="stat"><div class="rotulo">Menor lance</div><div class="valor" id="stMenor">–</div><div class="detalhe" id="stMenorDet"></div></div>
+  <div class="stat"><div class="rotulo">Próximo leilão</div><div class="valor" id="stProx">–</div><div class="detalhe" id="stProxDet"></div></div>
+</section>
+
+<section class="largura">
+  <div class="filtros">
+    <div class="linha"><span class="rotulo-filtro">Tipo</span><span id="tipos" class="linha rolagem"></span></div>
+    <div class="linha">
+      <span class="rotulo-filtro">Preço</span>
+      <span class="linha faixa">
+        <input class="campo" id="minimo" type="number" min="0" step="500" placeholder="mínimo" aria-label="Preço mínimo">
+        <span class="preco-sep">até</span>
+        <input class="campo" id="maximo" type="number" min="0" step="500" placeholder="máximo" aria-label="Preço máximo">
+      </span>
+      <span class="linha rolagem">
+        <button class="chip" data-faixa="0-3000">até 3 mil</button>
+        <button class="chip" data-faixa="0-6000">até 6 mil</button>
+        <button class="chip" data-faixa="0-15000">até 15 mil</button>
+        <button class="chip" data-faixa="-">qualquer</button>
+      </span>
+    </div>
+    <details class="mais" id="maisFiltros">
+      <summary>Mais filtros</summary>
+      <div class="conteudo">
+        <div class="linha">
+          <input class="campo" id="busca" type="search" placeholder="Buscar modelo (ex.: CG, Biz, Gol, 2015)">
+          <select class="campo" id="fonte"><option value="">Todas as fontes</option></select>
+          <select class="campo" id="cidade"><option value="">Todas as cidades</option></select>
+          <select class="campo" id="ordem">
+            <option value="preco">Em cada dia: menor preço</option>
+            <option value="ano">Em cada dia: mais novo</option>
+          </select>
+        </div>
+        <div class="linha">
+          <label class="check"><input id="semSucata" type="checkbox" checked> Esconder sucata</label>
+          <label class="check"><input id="soBr" type="checkbox" checked> Esconder placa estrangeira</label>
+          <button class="link-limpar" id="limpar" type="button">Limpar filtros</button>
+        </div>
+      </div>
+    </details>
+  </div>
+</section>
+
+<main class="largura" id="lista"></main>
+<footer>Dados públicos dos editais · Sempre leia o edital e visite o pátio antes de dar lance.</footer>
+
+<script>
+const ITENS = __DADOS__;
+const CATEGORIAS = __CATEGORIAS__;
+const PADRAO = { tipos: ["Moto"], minimo: "", maximo: "__MAXIMO__", busca: "", fonte: "",
+                 cidade: "", ordem: "preco", semSucata: true, soBr: true };
+const ICONES = { "Moto": "🏍️", "Carro": "🚗", "Caminhonete/Utilitário": "🛻",
+                 "Caminhão/Ônibus": "🚚", "Reboque/Outros": "🚜", "Leilão de prefeitura": "🏛️" };
+const SEMANA = ["DOM", "SEG", "TER", "QUA", "QUI", "SEX", "SÁB"];
+
+const $ = id => document.getElementById(id);
+const brl = v => v == null ? "—" : v.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const ehSucata = i => (i.situacao || "").startsWith("Sucata");
+const dataDe = iso => new Date((iso || "").replace(" ", "T"));
+const hora = iso => dataDe(iso).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+const ddmm = iso => dataDe(iso).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
+
+function diasAte(iso) {
+  const hoje = new Date(); hoje.setHours(0, 0, 0, 0);
+  const d = dataDe(iso); d.setHours(0, 0, 0, 0);
+  return Math.round((d - hoje) / 86400000);
+}
+const textoDias = n => n <= 0 ? "é hoje!" : n === 1 ? "é amanhã" : `faltam ${n} dias`;
+
+/* ---------- Tema claro/escuro ---------- */
+function temaAtual() {
+  const t = document.documentElement.dataset.theme;
+  if (t) return t;
+  return matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+}
+function desenharBotaoTema() { $("btnTema").textContent = temaAtual() === "dark" ? "☀️" : "🌙"; }
+$("btnTema").addEventListener("click", () => {
+  const novo = temaAtual() === "dark" ? "light" : "dark";
+  document.documentElement.dataset.theme = novo;
+  try { localStorage.setItem("radar-tema", novo); } catch (e) {}
+  desenharBotaoTema();
+});
+desenharBotaoTema();
+
+/* ---------- Filtros (ficam salvos no navegador) ---------- */
+let estado = { ...PADRAO };
+try { Object.assign(estado, JSON.parse(localStorage.getItem("radar-filtros-v2") || "{}")); } catch (e) {}
+const salvar = () => { try { localStorage.setItem("radar-filtros-v2", JSON.stringify(estado)); } catch (e) {} };
+
+for (const cat of CATEGORIAS) {
+  const n = ITENS.filter(i => i.categoria === cat).length;
+  if (!n) continue;
+  $("tipos").insertAdjacentHTML("beforeend",
+    `<button class="chip" data-tipo="${esc(cat)}">${ICONES[cat] || ""} ${esc(cat)}<span class="n">${n}</span></button>`);
+}
+for (const campo of ["fonte", "cidade"]) {
+  for (const v of [...new Set(ITENS.map(i => i[campo]).filter(Boolean))].sort()) {
+    $(campo).insertAdjacentHTML("beforeend", `<option>${esc(v)}</option>`);
+  }
+}
+// No computador os "mais filtros" já começam abertos.
+if (matchMedia("(min-width: 800px)").matches) $("maisFiltros").open = true;
+
+function lerTela() {
+  estado.tipos = [...document.querySelectorAll("[data-tipo]")]
+    .filter(b => b.getAttribute("aria-pressed") === "true").map(b => b.dataset.tipo);
+  for (const id of ["minimo", "maximo", "busca", "fonte", "cidade", "ordem"]) estado[id] = $(id).value;
+  for (const id of ["semSucata", "soBr"]) estado[id] = $(id).checked;
+}
+function mostrarNaTela() {
+  document.querySelectorAll("[data-tipo]").forEach(b =>
+    b.setAttribute("aria-pressed", estado.tipos.includes(b.dataset.tipo)));
+  for (const id of ["minimo", "maximo", "busca", "fonte", "cidade", "ordem"]) $(id).value = estado[id];
+  for (const id of ["semSucata", "soBr"]) $(id).checked = estado[id];
+  document.querySelectorAll("[data-faixa]").forEach(b => {
+    const [mi, ma] = b.dataset.faixa.split("-");
+    const ativo = (estado.minimo || "") === (mi === "0" ? "" : mi) && (estado.maximo || "") === ma;
+    b.setAttribute("aria-pressed", ativo);
+  });
+}
+
+/* ---------- Partes de um card ---------- */
+function classeStatus(i) {
+  const s = (i.situacao || "").toLowerCase();
+  if (i.tipo === "leilao") return "st-roxo";
+  if (s.startsWith("sucata")) return "st-perigo";
+  if (s.includes("regularizar") || s.includes("sem motor")) return "st-atencao";
+  if (s.startsWith("circula")) return "st-ok";
+  return "st-info";
+}
+function separarMarca(titulo) {
+  // "HONDA/CG 125 FAN 2013" -> ["HONDA", "CG 125 FAN 2013"]
+  // "JTA/SUZUKI EN125" -> ["SUZUKI", "EN125"]  (JTA e I/ são só prefixos de registro)
+  const t = (titulo || "").trim().replace(/^(JTA|I|IMP)\//, "");
+  const m = t.match(/^([^\s/]+)[\s/]+(.+)$/);
+  return m ? [m[1], m[2]] : ["", t];
+}
+function local(i) {
+  // Evita "Foz do Iguaçu · Pátio PRF - Foz do Iguaçu": se o pátio já cita a cidade, mostra só a cidade.
+  const semAcento = s => (s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toUpperCase();
+  if (!i.patio || i.patio === i.cidade || semAcento(i.patio).includes(semAcento(i.cidade))) return i.cidade;
+  return `${i.cidade} · ${i.patio}`;
+}
+function numeroLote(i) {
+  const m = (i.edital || "").match(/lote\s*(\d+)/i);
+  return m ? `Lote ${m[1]}` : "";
+}
+function avisosUteis(obs) {
+  return (obs || "").split(" | ").filter(a => a && !a.startsWith("Datas do edital"));
+}
+function classeFonte(fonte) {
+  return fonte === "Receita Federal" ? "fonte-receita" : fonte === "PRF" ? "fonte-prf" : "fonte-prefeitura";
+}
+function classeMidia(cat) {
+  return cat === "Moto" ? "cat-moto" : cat === "Leilão de prefeitura" ? "cat-pref" : "cat-carro";
+}
+
+function card(i) {
+  const leilao = i.tipo === "leilao";
+  // Prefeitura: o nome oficial vem sem acento ("Municipio De Sao Miguel..."), então usamos a cidade.
+  const [marca, modelo] = leilao
+    ? (/^munic/i.test(i.titulo) ? ["Prefeitura de", i.cidade] : ["Órgão público", i.titulo])
+    : separarMarca(i.titulo);
+  const midia = i.foto
+    ? `<img src="${esc(i.foto)}" alt="" loading="lazy">`
+    : `<span class="icone" aria-hidden="true">${ICONES[i.categoria] || "🚙"}</span>`;
+  const avisos = avisosUteis(i.obs).map(a => `<div class="aviso">⚠️ ${esc(a)}</div>`).join("");
+  const infos = [
+    ["📍", local(i)],
+    ["🕘", `Leilão ${ddmm(i.data_leilao)} às ${hora(i.data_leilao)}`],
+    !leilao && numeroLote(i) ? ["🔖", numeroLote(i) + (i.placa ? ` · Placa ${i.placa}` : "")] : null,
+  ].filter(Boolean).map(([ic, tx]) => `<li><span>${ic}</span><span>${esc(tx)}</span></li>`).join("");
+
+  return `
+  <article class="card">
+    <div class="midia ${classeMidia(i.categoria)}">
+      ${midia}
+      <div class="selos">
+        <span class="selo ${classeFonte(i.fonte)}">${esc(i.fonte)}</span>
+        ${i.novo ? '<span class="selo novo">NOVO</span>' : ""}
+      </div>
+    </div>
+    <div class="corpo">
+      <div>
+        ${marca ? `<div class="marca-veiculo">${esc(marca)}</div>` : ""}
+        <h3 class="titulo">${esc(modelo)}</h3>
+      </div>
+      ${leilao
+        ? `<div class="descricao">${esc(i.descricao)}</div>`
+        : `<div class="preco"><strong>${brl(i.valor_minimo)}</strong><span>lance inicial</span>
+             ${i.valor_avaliacao && i.valor_avaliacao !== i.valor_minimo ? `<span>· avaliado em ${brl(i.valor_avaliacao)}</span>` : ""}</div>`}
+      ${i.situacao ? `<span class="status ${classeStatus(i)}">${esc(i.situacao)}</span>` : ""}
+      <ul class="infos">${infos}</ul>
+      ${i.prazo_propostas ? `<div class="prazo">⏰ Propostas até ${ddmm(i.prazo_propostas)} às ${hora(i.prazo_propostas)}</div>` : ""}
+      ${avisos}
+      <div class="botoes">
+        <a class="btn primario" href="${esc(i.link)}" target="_blank" rel="noopener">${leilao ? "Ver leilão" : "Site do leilão"}</a>
+        <a class="btn" href="${esc(i.link_edital)}" target="_blank" rel="noopener">Edital</a>
+      </div>
+    </div>
+  </article>`;
+}
+
+/* ---------- Desenho da lista ---------- */
+function filtrar() {
+  const min = parseFloat(estado.minimo) || 0;
+  const max = parseFloat(estado.maximo) || Infinity;
+  const busca = estado.busca.trim().toUpperCase();
+  return ITENS.filter(i =>
+    estado.tipos.includes(i.categoria) &&
+    (i.valor_minimo == null || (i.valor_minimo >= min && i.valor_minimo <= max)) &&
+    (!estado.fonte || i.fonte === estado.fonte) &&
+    (!estado.cidade || i.cidade === estado.cidade) &&
+    (!estado.semSucata || !ehSucata(i)) &&
+    (!estado.soBr || !i.estrangeira) &&
+    (!busca || `${i.titulo} ${i.descricao} ${i.cidade}`.toUpperCase().includes(busca)));
+}
+
+function desenharResumo(lista) {
+  const lotes = lista.filter(i => i.tipo !== "leilao");
+  $("stTotal").textContent = lista.length;
+  $("stTotalDet").textContent = estado.tipos.length === 1 ? estado.tipos[0].toLowerCase() + (estado.maximo ? ` até ${brl(+estado.maximo)}` : "")
+                                                           : `${estado.tipos.length} tipos selecionados`;
+  const menor = lotes.reduce((m, i) => (i.valor_minimo != null && (!m || i.valor_minimo < m.valor_minimo)) ? i : m, null);
+  $("stMenor").textContent = menor ? brl(menor.valor_minimo) : "–";
+  $("stMenorDet").textContent = menor ? menor.titulo : "nenhum lote";
+  const prox = lista.reduce((m, i) => (!m || i.data_leilao < m.data_leilao) ? i : m, null);
+  $("stProx").textContent = prox ? ddmm(prox.data_leilao) : "–";
+  $("stProxDet").textContent = prox ? `${prox.fonte} · ${textoDias(diasAte(prox.data_leilao))}` : "";
+}
+
+function desenhar() {
+  const lista = filtrar();
+  desenharResumo(lista);
+
+  if (!estado.tipos.length) {
+    $("lista").innerHTML = `<div class="vazio"><div class="grande">👆</div>Escolha pelo menos um tipo de veículo.</div>`;
+    return;
+  }
+  if (!lista.length) {
+    $("lista").innerHTML = `<div class="vazio"><div class="grande">🔍</div>Nada encontrado com esses filtros.<br>
+      Tente aumentar a faixa de preço ou <button class="link-limpar" onclick="limpar()">limpar os filtros</button>.</div>`;
+    return;
+  }
+
+  // Agrupa por dia do leilão.
+  const grupos = new Map();
+  for (const i of lista) {
+    const dia = (i.data_leilao || "").slice(0, 10);
+    if (!grupos.has(dia)) grupos.set(dia, []);
+    grupos.get(dia).push(i);
+  }
+  const ordenar = estado.ordem === "ano"
+    ? (a, b) => (b.ano || 0) - (a.ano || 0)
+    : (a, b) => (a.valor_minimo ?? 1e12) - (b.valor_minimo ?? 1e12);
+
+  $("lista").innerHTML = [...grupos.keys()].sort().map(dia => {
+    const itens = grupos.get(dia).sort(ordenar);
+    const d = dataDe(dia + " 12:00");
+    const n = diasAte(dia + " 12:00");
+    const fontes = [...new Set(itens.map(i => i.fonte))].join(" · ");
+    return `
+    <section class="dia">
+      <header class="dia-cab">
+        <div class="dia-data"><span class="dia-semana">${SEMANA[d.getDay()]}</span><span class="dia-num">${ddmm(dia + " 12:00")}</span></div>
+        <div class="dia-info"><h2>${esc(fontes)}</h2><p>${itens.length} ${itens.length === 1 ? "item" : "itens"}</p></div>
+        <span class="contagem ${n <= 2 ? "urgente" : ""}">${textoDias(n)}</span>
+      </header>
+      <div class="grade">${itens.map(card).join("")}</div>
+    </section>`;
+  }).join("");
+}
+
+function atualizar() { lerTela(); salvar(); mostrarNaTela(); desenhar(); }
+function limpar() { estado = { ...PADRAO }; salvar(); mostrarNaTela(); desenhar(); }
+
+document.querySelectorAll("[data-tipo]").forEach(b => b.addEventListener("click", () => {
+  b.setAttribute("aria-pressed", b.getAttribute("aria-pressed") !== "true"); atualizar();
+}));
+document.querySelectorAll("[data-faixa]").forEach(b => b.addEventListener("click", () => {
+  const [mi, ma] = b.dataset.faixa.split("-");
+  $("minimo").value = mi === "0" ? "" : mi; $("maximo").value = ma; atualizar();
+}));
+for (const id of ["minimo", "maximo", "busca", "fonte", "cidade", "ordem", "semSucata", "soBr"]) {
+  $(id).addEventListener("input", atualizar);
+}
+$("limpar").addEventListener("click", limpar);
+
+mostrarNaTela();
+desenhar();
+</script>
+</body>
+</html>
