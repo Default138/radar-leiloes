@@ -44,7 +44,10 @@ jobs:
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: python coletar.py
 
+      # Roda mesmo se o passo anterior falhar (ex.: Telegram fora do ar),
+      # para o site não ficar parado. Só não roda se você cancelar.
       - name: Salvar banco e site atualizados
+        if: ${{ !cancelled() }}
         run: |
           git config user.name "radar-leiloes[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"

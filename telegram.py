@@ -37,7 +37,9 @@ def ler_env():
     for chave in ("TELEGRAM_TOKEN", "TELEGRAM_CHAT_ID"):
         if os.environ.get(chave):
             valores[chave] = os.environ[chave]
-    return valores
+    # Tira espaços/quebras de linha colados sem querer (ex.: no Secret do
+    # GitHub). Um espaço no token quebra o endereço da API do Telegram.
+    return {chave: valor.strip() for chave, valor in valores.items()}
 
 
 def _chamar(token, metodo, parametros):

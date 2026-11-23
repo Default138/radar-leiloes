@@ -87,8 +87,10 @@ def avisar(conexao):
     novos = [i for i in itens if not i["alertado"]]
     para_avisar = [i for i in novos if interessa(i)]
     if para_avisar:
+        # O ponto de milhar vai só no valor (antes trocava a vírgula da lista também).
+        maximo = f"{config.VALOR_MAXIMO:,}".replace(",", ".")
         cabecalho = (f"🔔 <b>{len(para_avisar)} novidade(s)</b> "
-                     f"({', '.join(config.TIPOS_ALERTA)} até R$ {config.VALOR_MAXIMO:,})".replace(",", "."))
+                     f"({', '.join(config.TIPOS_ALERTA)} até R$ {maximo})")
         telegram.enviar(cabecalho + "\n\n" + "\n\n".join(formatar(i) for i in para_avisar))
     banco.marcar(conexao, [i["id"] for i in novos], "alertado")
 
@@ -123,14 +125,23 @@ def main():
             print(f"{nome}: ERRO")
             traceback.print_exc()
 
-    if usar_telegram:
-        avisar(conexao)
-        if erros and telegram.configurado():
-            telegram.enviar("⚠️ Radar de Leilões: erro ao coletar " + ", ".join(erros)
-                            + ". Veja o coleta.log.")
-
+    # O site é gerado ANTES dos avisos: se o Telegram falhar, o site e o
+    # banco continuam sendo atualizados.
     arquivo = painel.gerar(banco.futuros(conexao))
     print(f"Painel: {arquivo}")
+
+    if usar_telegram:
+        try:
+            avisar(conexao)
+            if erros and telegram.configurado():
+                telegram.enviar("⚠️ Radar de Leilões: erro ao coletar " + ", ".join(erros)
+                                + ". Veja o log no GitHub (aba Actions).")
+        except Exception:
+            # Os itens não são marcados como avisados, então serão
+            # avisados na próxima coleta que funcionar.
+            print("Telegram: ERRO ao enviar avisos")
+            traceback.print_exc()
+            sys.exit(1)  # deixa a execução vermelha no GitHub, para você notar
 
 
 if __name__ == "__main__":
