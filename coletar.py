@@ -21,17 +21,22 @@ import comandos
 import config
 import painel
 import telegram
-from fontes import prefeituras, prf, receita
+from fontes import detran, foztrans, pf, prefeituras, prf, receita
 
 FONTES = {
     "Receita Federal": receita.coletar,
     "PRF": prf.coletar,
+    "Polícia Federal": pf.coletar,
+    "Detran-PR": detran.coletar,
+    "Foztrans": foztrans.coletar,
     "Prefeituras (PNCP)": prefeituras.coletar,
 }
 
 
 # Quantos itens no máximo o /lista manda (o resto, veja no site).
 LIMITE_LISTA = 30
+# Quantos itens no máximo vão num aviso de novidades/lembrete.
+LIMITE_AVISO = 20
 
 
 def data_br(iso):
@@ -78,6 +83,20 @@ def listar(conexao, filtros):
     return texto + f'\n\n<a href="{config.SITE}">Abrir o site</a>'
 
 
+def mensagem_resumida(cabecalho, itens):
+    """
+    Cabeçalho + itens, mas no máximo LIMITE_AVISO (os mais baratos).
+    Um leilão grande (ex.: Foztrans, 80+ motos) viraria 8 mensagens seguidas.
+    """
+    itens = sorted(itens, key=lambda i: (i["valor_minimo"] is None, i["valor_minimo"] or 0))
+    texto = cabecalho + "\n\n" + "\n\n".join(formatar(i) for i in itens[:LIMITE_AVISO])
+    if len(itens) > LIMITE_AVISO:
+        texto += (f"\n\n➕ <b>E mais {len(itens) - LIMITE_AVISO}</b> (acima mostrei os "
+                  f"{LIMITE_AVISO} mais baratos). Veja todos no "
+                  f'<a href="{config.SITE}">site</a> ou mande /lista.')
+    return texto
+
+
 def avisar(conexao):
     if not telegram.configurado():
         print("Telegram não configurado (.env). Pulando avisos.")
@@ -93,8 +112,7 @@ def avisar(conexao):
     novos = [i for i in itens if not i["alertado"]]
     para_avisar = [i for i in novos if comandos.passa(i, filtros)]
     if para_avisar:
-        cabecalho = f"🔔 <b>{len(para_avisar)} novidade(s)</b>"
-        telegram.enviar(cabecalho + "\n\n" + "\n\n".join(formatar(i) for i in para_avisar)
+        telegram.enviar(mensagem_resumida(f"🔔 <b>{len(para_avisar)} novidade(s)</b>", para_avisar)
                         + "\n\n<i>Filtros: /filtros · Ajuda: /ajuda</i>")
     banco.marcar(conexao, [i["id"] for i in novos], "alertado")
 
@@ -105,8 +123,8 @@ def avisar(conexao):
                if not i["lembrado"] and comandos.passa(i, filtros)
                and data_chave(i) and agora < data_chave(i) <= limite]
     if vespera:
-        telegram.enviar("⏳ <b>Está chegando a hora!</b>\n\n"
-                        + "\n\n".join(formatar(i) for i in vespera))
+        telegram.enviar(mensagem_resumida(f"⏳ <b>Está chegando a hora!</b> ({len(vespera)} item(ns))",
+                                          vespera))
         banco.marcar(conexao, [i["id"] for i in vespera], "lembrado")
 
 

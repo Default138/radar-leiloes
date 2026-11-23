@@ -20,6 +20,9 @@ GitHub Pages
 |---|---|---|
 | Receita Federal | API pública do Sistema de Leilão Eletrônico (SLE) | cada veículo: descrição, pátio, lance mínimo, foto, prazo |
 | PRF | API do site gov.br (Plone) + planilha PDF "Anexo II" | cada veículo: modelo, placa, situação (circulação/sucata), valor |
+| Polícia Federal | páginas HTML de gov.br/pf (delegacias do PR) + PDF do edital | cada veículo oficial usado: modelo, placa, valor mínimo |
+| Detran-PR | página "Leilões públicos" + PDFs de texto e anexo | só leilões de **conservados** (sucata é só para desmontadoras); cada veículo com tipo, placa e lance inicial; leilão presencial |
+| Foztrans | página foztrans.pr.gov.br/leilao + PDF do edital | veículos guinchados em Foz: códigos LMC/LMS (moto) e LCC/LCS (carro), circulação ou sucata |
 | Prefeituras | API do PNCP (Portal Nacional de Contratações Públicas) | o leilão inteiro (abrir o edital para ver os lotes) |
 
 ## Estrutura
@@ -29,6 +32,9 @@ config.py              <- cidades, valor máximo, tipos que avisam (mexa aqui)
 coletar.py             <- programa principal
 fontes/receita.py      <- coletor da Receita
 fontes/prf.py          <- coletor da PRF (lê PDF)
+fontes/pf.py           <- coletor da Polícia Federal (lê PDF)
+fontes/detran.py       <- coletor do Detran-PR (lê PDF)
+fontes/foztrans.py     <- coletor da Foztrans (lê PDF)
 fontes/prefeituras.py  <- coletor do PNCP
 util.py                <- funções comuns (download, cidades, categorias)
 banco.py               <- banco SQLite (leiloes.db)

@@ -10,7 +10,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Radar de Leilões</title>
-<meta name="description" content="Veículos em leilão entre Foz do Iguaçu e Cascavel: Receita Federal, PRF e Prefeituras.">
+<meta name="description" content="Veículos em leilão entre Foz do Iguaçu e Cascavel: Receita Federal, PRF, Polícia Federal, Detran-PR, Foztrans e Prefeituras.">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏍️</text></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -30,6 +30,8 @@
     --perigo: #b3261e;  --perigo-fundo: #fbe4e2;
     --info: #1d5fae;    --info-fundo: #e2edfa;
     --roxo: #6b3fa0;    --roxo-fundo: #efe6fa;
+    --ardosia: #3d5170; --ardosia-fundo: #e4e9f2;
+    --turquesa: #00727a; --turquesa-fundo: #ddf3f2;
     --sombra: 0 1px 2px rgba(16,32,24,.06), 0 4px 16px rgba(16,32,24,.06);
     --sombra-forte: 0 2px 4px rgba(16,32,24,.08), 0 12px 32px rgba(16,32,24,.12);
     color-scheme: light;
@@ -45,6 +47,8 @@
       --perigo: #ff8a80;  --perigo-fundo: #42201e;
       --info: #82b8ff;    --info-fundo: #16304d;
       --roxo: #c7a6ff;    --roxo-fundo: #2c2145;
+      --ardosia: #a9bde0; --ardosia-fundo: #1f2c40;
+      --turquesa: #6fd8d8; --turquesa-fundo: #113a3c;
       --sombra: 0 1px 2px rgba(0,0,0,.3), 0 4px 16px rgba(0,0,0,.25);
       --sombra-forte: 0 2px 4px rgba(0,0,0,.35), 0 12px 32px rgba(0,0,0,.4);
       color-scheme: dark;
@@ -59,6 +63,8 @@
     --perigo: #ff8a80;  --perigo-fundo: #42201e;
     --info: #82b8ff;    --info-fundo: #16304d;
     --roxo: #c7a6ff;    --roxo-fundo: #2c2145;
+    --ardosia: #a9bde0; --ardosia-fundo: #1f2c40;
+    --turquesa: #6fd8d8; --turquesa-fundo: #113a3c;
     --sombra: 0 1px 2px rgba(0,0,0,.3), 0 4px 16px rgba(0,0,0,.25);
     --sombra-forte: 0 2px 4px rgba(0,0,0,.35), 0 12px 32px rgba(0,0,0,.4);
     color-scheme: dark;
@@ -158,6 +164,9 @@
   .fonte-receita { background: var(--info-fundo); color: var(--info); }
   .fonte-prf { background: var(--atencao-fundo); color: var(--atencao); }
   .fonte-prefeitura { background: var(--roxo-fundo); color: var(--roxo); }
+  .fonte-pf { background: var(--ardosia-fundo); color: var(--ardosia); }
+  .fonte-detran { background: var(--ok-fundo); color: var(--ok); }
+  .fonte-foztrans { background: var(--turquesa-fundo); color: var(--turquesa); }
   .selo.novo { background: var(--acento); color: var(--acento-texto); }
 
   .corpo { padding: 13px 15px 15px; display: flex; flex-direction: column; gap: 9px; flex: 1; }
@@ -225,7 +234,7 @@
       <div class="logo" aria-hidden="true">🏍️</div>
       <div>
         <h1>Radar de Leilões</h1>
-        <p>Foz do Iguaçu → Cascavel · Receita Federal, PRF e Prefeituras</p>
+        <p>Foz do Iguaçu → Cascavel · Receita, PRF, PF, Detran, Foztrans e Prefeituras</p>
       </div>
     </div>
     <div class="acoes-topo">
@@ -365,7 +374,7 @@ function classeStatus(i) {
   if (i.tipo === "leilao") return "st-roxo";
   if (s.startsWith("sucata")) return "st-perigo";
   if (s.includes("regularizar") || s.includes("sem motor")) return "st-atencao";
-  if (s.startsWith("circula")) return "st-ok";
+  if (s.startsWith("circula") || s.startsWith("conservado")) return "st-ok";
   return "st-info";
 }
 function separarMarca(titulo) {
@@ -389,7 +398,9 @@ function avisosUteis(obs) {
   return (obs || "").split(" | ").filter(a => a && !a.startsWith("Datas do edital"));
 }
 function classeFonte(fonte) {
-  return fonte === "Receita Federal" ? "fonte-receita" : fonte === "PRF" ? "fonte-prf" : "fonte-prefeitura";
+  const classes = { "Receita Federal": "fonte-receita", "PRF": "fonte-prf", "Polícia Federal": "fonte-pf",
+                    "Detran-PR": "fonte-detran", "Foztrans": "fonte-foztrans" };
+  return classes[fonte] || "fonte-prefeitura";
 }
 function classeMidia(cat) {
   return cat === "Moto" ? "cat-moto" : cat === "Leilão de prefeitura" ? "cat-pref" : "cat-carro";
