@@ -56,6 +56,10 @@ PALAVRAS_PREFEITURA = ["VEIC", "MOTO", "BENS MOVEIS", "INSERVIV", "SUCATA"]
 # Endereço do site (vai no link do /lista do Telegram).
 SITE = "https://default138.github.io/radar-leiloes/"
 
+# Só avisa no Telegram que uma fonte deu erro depois de tantas coletas
+# seguidas com erro (2 = um dia inteiro). Bloqueios passageiros não incomodam.
+FALHAS_PARA_AVISAR = 2
+
 # Quantos dias antes do leilão mandar o lembrete no Telegram.
 DIAS_LEMBRETE = 1
 

@@ -68,6 +68,22 @@ def salvar(conexao, itens):
     return novos
 
 
+def registrar_falha(conexao, fonte, deu_erro):
+    """
+    Conta quantas coletas SEGUIDAS a fonte deu erro. Devolve (antes, agora).
+    Ex.: falhou de novo -> (1, 2); voltou a funcionar -> (2, 0).
+    """
+    conexao.execute("CREATE TABLE IF NOT EXISTS falhas (fonte TEXT PRIMARY KEY, "
+                    "seguidas INTEGER DEFAULT 0)")
+    linha = conexao.execute("SELECT seguidas FROM falhas WHERE fonte = ?", (fonte,)).fetchone()
+    antes = linha["seguidas"] if linha else 0
+    agora = antes + 1 if deu_erro else 0
+    conexao.execute("INSERT OR REPLACE INTO falhas (fonte, seguidas) VALUES (?, ?)",
+                    (fonte, agora))
+    conexao.commit()
+    return antes, agora
+
+
 def esquecer_ausentes(conexao, itens):
     """
     A fonte funcionou e devolveu estes itens: o que ela devolvia antes e não

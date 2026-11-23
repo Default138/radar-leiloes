@@ -12,7 +12,12 @@ USER_AGENT = "Mozilla/5.0 (radar-leiloes; uso pessoal)"
 
 
 def baixar(url, tentativas=3):
-    """Baixa uma URL e devolve os bytes. Tenta de novo se der erro de rede."""
+    """
+    Baixa uma URL e devolve os bytes. Tenta de novo se der erro de rede,
+    esperando cada vez mais (15s, 30s): alguns sites do governo derrubam a
+    conexão por um tempo quando recebem muitos acessos.
+    """
+    import urllib.error
     for tentativa in range(1, tentativas + 1):
         try:
             pedido = urllib.request.Request(url, headers={
@@ -23,10 +28,16 @@ def baixar(url, tentativas=3):
                 dados = resposta.read()
             time.sleep(config.PAUSA_ENTRE_REQUISICOES)
             return dados
+        except urllib.error.HTTPError as erro:
+            # O site respondeu "proibido"/"não existe" (4xx): tentar de novo
+            # não muda nada. Só insiste em erro do servidor (5xx).
+            if erro.code < 500 or tentativa == tentativas:
+                raise
+            time.sleep(15 * tentativa)
         except Exception:
             if tentativa == tentativas:
                 raise
-            time.sleep(3 * tentativa)
+            time.sleep(15 * tentativa)
 
 
 def baixar_json(url):

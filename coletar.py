@@ -134,7 +134,8 @@ def main():
 
     conexao = banco.conectar()
     ids_novos = set()
-    erros = []
+    avisar_erro = []   # fontes que acabaram de completar N falhas seguidas
+    voltaram = []      # fontes que tinham sido avisadas e voltaram a funcionar
     for nome, funcao in FONTES.items():
         try:
             itens = funcao()
@@ -142,11 +143,17 @@ def main():
             banco.esquecer_ausentes(conexao, itens)
             ids_novos.update(novos)
             print(f"{nome}: {len(itens)} itens ({len(novos)} novos)")
+            antes, _ = banco.registrar_falha(conexao, nome, deu_erro=False)
+            if antes >= config.FALHAS_PARA_AVISAR:
+                voltaram.append(nome)
         except Exception:
             # Se um site mudar ou sair do ar, as outras fontes continuam.
-            erros.append(nome)
             print(f"{nome}: ERRO")
             traceback.print_exc()
+            _, seguidas = banco.registrar_falha(conexao, nome, deu_erro=True)
+            # Avisa uma vez só, quando completa N falhas seguidas (não a cada coleta).
+            if seguidas == config.FALHAS_PARA_AVISAR:
+                avisar_erro.append(nome)
 
     # O site é gerado ANTES dos avisos: se o Telegram falhar, o site e o
     # banco continuam sendo atualizados.
@@ -156,9 +163,12 @@ def main():
     if usar_telegram:
         try:
             avisar(conexao)
-            if erros and telegram.configurado():
-                telegram.enviar("⚠️ Radar de Leilões: erro ao coletar " + ", ".join(erros)
-                                + ". Veja o log no GitHub (aba Actions).")
+            if avisar_erro and telegram.configurado():
+                telegram.enviar(f"⚠️ Radar de Leilões: {', '.join(avisar_erro)} com erro há "
+                                f"{config.FALHAS_PARA_AVISAR} coletas seguidas. Veja o log no "
+                                "GitHub (aba Actions). Aviso de novo quando voltar a funcionar.")
+            if voltaram and telegram.configurado():
+                telegram.enviar(f"✅ Radar de Leilões: {', '.join(voltaram)} voltou a funcionar.")
         except Exception:
             # Os itens não são marcados como avisados, então serão
             # avisados na próxima coleta que funcionar.
