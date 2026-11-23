@@ -1,0 +1,12 @@
+{
+  "tipos": [
+    "Moto",
+    "Leilão de prefeitura"
+  ],
+  "preco_min": 0,
+  "preco_max": 6000,
+  "sucata": false,
+  "estrangeira": false,
+  "cidades": [],
+  "ultimo_update": 0
+}

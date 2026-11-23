@@ -17,6 +17,7 @@ import traceback
 from datetime import datetime, timedelta
 
 import banco
+import comandos
 import config
 import painel
 import telegram
@@ -29,18 +30,8 @@ FONTES = {
 }
 
 
-def interessa(item):
-    """Este item merece aviso no Telegram?"""
-    if item["categoria"] not in config.TIPOS_ALERTA:
-        return False
-    if item["tipo"] == "leilao":
-        return True  # leilão de prefeitura não tem preço por lote
-    if item["estrangeira"]:
-        return False
-    if (item["situacao"] or "").startswith("Sucata"):
-        return False
-    valor = item["valor_minimo"]
-    return valor is not None and valor <= config.VALOR_MAXIMO
+# Quantos itens no máximo o /lista manda (o resto, veja no site).
+LIMITE_LISTA = 30
 
 
 def data_br(iso):
@@ -75,30 +66,43 @@ def data_chave(item):
     return datetime.strptime(iso[:16], "%Y-%m-%d %H:%M") if iso else None
 
 
+def listar(conexao, filtros):
+    """Resposta do /lista: tudo à venda agora que passa nos filtros."""
+    itens = [i for i in banco.futuros(conexao) if comandos.passa(i, filtros)]
+    if not itens:
+        return "📋 Nada à venda agora com estes filtros.\n\n" + comandos.resumo(filtros)
+    texto = f"📋 <b>{len(itens)} item(ns) à venda com seus filtros</b>"
+    if len(itens) > LIMITE_LISTA:
+        texto += f" (mostrando os {LIMITE_LISTA} primeiros; o resto está no site)"
+    texto += "\n\n" + "\n\n".join(formatar(i) for i in itens[:LIMITE_LISTA])
+    return texto + f'\n\n<a href="{config.SITE}">Abrir o site</a>'
+
+
 def avisar(conexao):
     if not telegram.configurado():
         print("Telegram não configurado (.env). Pulando avisos.")
         return
+
+    # 0) Comandos que você mandou no chat desde a última coleta (/tipos, /preco...).
+    filtros = comandos.processar(lambda f: listar(conexao, f))
 
     itens = banco.futuros(conexao)
 
     # 1) Novidades: tudo que ainda não foi avisado (inclui o que foi
     #    coletado enquanto o Telegram estava desligado).
     novos = [i for i in itens if not i["alertado"]]
-    para_avisar = [i for i in novos if interessa(i)]
+    para_avisar = [i for i in novos if comandos.passa(i, filtros)]
     if para_avisar:
-        # O ponto de milhar vai só no valor (antes trocava a vírgula da lista também).
-        maximo = f"{config.VALOR_MAXIMO:,}".replace(",", ".")
-        cabecalho = (f"🔔 <b>{len(para_avisar)} novidade(s)</b> "
-                     f"({', '.join(config.TIPOS_ALERTA)} até R$ {maximo})")
-        telegram.enviar(cabecalho + "\n\n" + "\n\n".join(formatar(i) for i in para_avisar))
+        cabecalho = f"🔔 <b>{len(para_avisar)} novidade(s)</b>"
+        telegram.enviar(cabecalho + "\n\n" + "\n\n".join(formatar(i) for i in para_avisar)
+                        + "\n\n<i>Filtros: /filtros · Ajuda: /ajuda</i>")
     banco.marcar(conexao, [i["id"] for i in novos], "alertado")
 
     # 2) Lembretes de véspera
     agora = datetime.now()
     limite = agora + timedelta(days=config.DIAS_LEMBRETE)
     vespera = [i for i in itens
-               if not i["lembrado"] and interessa(i)
+               if not i["lembrado"] and comandos.passa(i, filtros)
                and data_chave(i) and agora < data_chave(i) <= limite]
     if vespera:
         telegram.enviar("⏳ <b>Está chegando a hora!</b>\n\n"

@@ -33,6 +33,8 @@ fontes/prefeituras.py  <- coletor do PNCP
 util.py                <- funções comuns (download, cidades, categorias)
 banco.py               <- banco SQLite (leiloes.db)
 telegram.py            <- envio de mensagens
+comandos.py            <- filtros pelo chat do Telegram (/tipos, /preco...)
+filtros.json           <- filtros atuais (o bot atualiza sozinho)
 painel.py              <- gera o site (docs/index.html) a partir do modelo
 modelo_site.html       <- visual do site (HTML/CSS/JS) — edite aqui para mudar a aparência
 .github/workflows/coletar.yml <- agenda do GitHub Actions
@@ -47,8 +49,25 @@ modelo_site.html       <- visual do site (HTML/CSS/JS) — edite aqui para mudar
 
 ## Avisos no Telegram
 
-- **Novidade:** item novo cuja categoria está em `TIPOS_ALERTA`, com valor ≤
-  `VALOR_MAXIMO`, placa brasileira e que não seja sucata.
+- **Novidade:** item novo que passa nos seus filtros (tipo, preço, sucata,
+  placa estrangeira, cidade).
+- **Filtros pelo chat:** mande comandos para o bot. Ele só lê nas coletas
+  (08h/18h), então a resposta pode demorar algumas horas.
+
+  | Comando | O que faz |
+  |---|---|
+  | `/filtros` | mostra os filtros atuais |
+  | `/tipos moto carro` | moto, carro, caminhonete, caminhao, reboque, prefeitura ou todos |
+  | `/preco 1000 6000` | faixa de preço (ou só o máximo: `/preco 6000`) |
+  | `/sucata sim` / `/sucata nao` | incluir sucatas? |
+  | `/estrangeira sim` / `/estrangeira nao` | incluir placa estrangeira? |
+  | `/cidade foz, cascavel` / `/cidade todas` | cidades (separadas por vírgula) |
+  | `/lista` | tudo à venda agora que passa nos filtros |
+  | `/padrao` | volta aos valores do `config.py` |
+  | `/ajuda` | lista os comandos |
+
+  Os filtros ficam em `filtros.json`. Só mensagens do seu `TELEGRAM_CHAT_ID`
+  são obedecidas (o bot é público).
 - **Lembrete:** `DIAS_LEMBRETE` dia(s) antes do fim das propostas (Receita) ou do leilão.
 - Se um site der erro, as outras fontes continuam e chega um aviso de erro.
 
