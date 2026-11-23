@@ -7,7 +7,7 @@ Guardamos cada lote/leilão encontrado. Assim o sistema sabe:
 """
 
 import sqlite3
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 
 ARQUIVO = Path(__file__).parent / "leiloes.db"
@@ -68,13 +68,37 @@ def salvar(conexao, itens):
     return novos
 
 
+def esquecer_ausentes(conexao, itens):
+    """
+    A fonte funcionou e devolveu estes itens: o que ela devolvia antes e não
+    devolve mais (lote retirado, leilão trocado por lotes...) sai do site já.
+    Se a fonte não devolveu nada, não mexe (pode ter sido erro do site).
+    """
+    vistos = {item["id"] for item in itens}
+    for fonte in {item["fonte"] for item in itens}:
+        antigos = [linha["id"] for linha in conexao.execute(
+            "SELECT id FROM itens WHERE fonte = ? AND ultima_vez >= ?",
+            (fonte, "2000-01-02"))]
+        sumidos = [i for i in antigos if i not in vistos]
+        conexao.executemany("UPDATE itens SET ultima_vez = '2000-01-01 00:00' WHERE id = ?",
+                            [(i,) for i in sumidos])
+    conexao.commit()
+
+
+# Item que nenhuma coleta encontrou nesses dias é considerado removido da fonte
+# (ex.: lote retirado do leilão) e some do site e dos avisos.
+DIAS_SEM_VER = 3
+
+
 def futuros(conexao):
     """Itens cujo leilão ainda não passou, do mais próximo ao mais distante."""
     # Compara data E hora: um leilão de hoje às 10h já some às 10h01.
-    agora = datetime.now().strftime("%Y-%m-%d %H:%M")
+    agora = datetime.now()
+    visto_desde = (agora - timedelta(days=DIAS_SEM_VER)).strftime("%Y-%m-%d %H:%M")
     return conexao.execute(
-        "SELECT * FROM itens WHERE data_leilao >= ? ORDER BY data_leilao, valor_minimo",
-        (agora,)).fetchall()
+        "SELECT * FROM itens WHERE data_leilao >= ? AND ultima_vez >= ? "
+        "ORDER BY data_leilao, valor_minimo",
+        (agora.strftime("%Y-%m-%d %H:%M"), visto_desde)).fetchall()
 
 
 def marcar(conexao, ids, campo):

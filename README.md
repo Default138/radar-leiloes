@@ -23,7 +23,7 @@ GitHub Pages
 | Polícia Federal | páginas HTML de gov.br/pf (delegacias do PR) + PDF do edital | cada veículo oficial usado: modelo, placa, valor mínimo |
 | Detran-PR | página "Leilões públicos" + PDFs de texto e anexo | só leilões de **conservados** (sucata é só para desmontadoras); cada veículo com tipo, placa e lance inicial; leilão presencial |
 | Foztrans | página foztrans.pr.gov.br/leilao + PDF do edital | veículos guinchados em Foz: códigos LMC/LMS (moto) e LCC/LCS (carro), circulação ou sucata |
-| Prefeituras | API do PNCP (Portal Nacional de Contratações Públicas) | o leilão inteiro (abrir o edital para ver os lotes) |
+| Prefeituras | API do PNCP (Portal Nacional de Contratações Públicas) + lista de itens de cada leilão | cada veículo achado na lista (modelo, ano, placa, lance mínimo); se não achar veículo, o leilão inteiro |
 
 ## Estrutura
 

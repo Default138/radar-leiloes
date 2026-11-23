@@ -139,6 +139,7 @@ def main():
         try:
             itens = funcao()
             novos = banco.salvar(conexao, itens)
+            banco.esquecer_ausentes(conexao, itens)
             ids_novos.update(novos)
             print(f"{nome}: {len(itens)} itens ({len(novos)} novos)")
         except Exception:
